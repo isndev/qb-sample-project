@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qb")
 set(QB_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/qb-module")
 
+enable_testing()
 # Add cube framework
 add_subdirectory(${QB_PATH})
 
