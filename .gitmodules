@@ -1,6 +1,3 @@
-[submodule "qb"]
-	path = qb
-	url = https://github.com/isndev/cube.git
 [submodule "qb-module/sample"]
 	path = qb-module/sample
 	url = https://github.com/isndev/qb-sample-module.git
@@ -10,3 +7,7 @@
 [submodule "qb-module/timer"]
 	path = qb-module/timer
 	url = https://github.com/isndev/qb-module-timer.git
+[submodule "qb"]
+	path = qb
+	url = https://github.com/isndev/qb.git
+	branch = master
