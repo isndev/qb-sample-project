@@ -1,13 +1,24 @@
-[submodule "qb-module/sample"]
-	path = qb-module/sample
-	url = https://github.com/isndev/qb-sample-module.git
-[submodule "qb-module/iopoll"]
-	path = qb-module/iopoll
-	url = https://github.com/isndev/qb-module-iopoll.git
-[submodule "qb-module/timer"]
-	path = qb-module/timer
-	url = https://github.com/isndev/qb-module-timer.git
 [submodule "qb"]
 	path = qb
 	url = https://github.com/isndev/qb.git
-	branch = master
+	branch = main
+[submodule "qbm/http"]
+	path = qbm/http
+	url = https://github.com/isndev/qbm-http
+	branch = main
+[submodule "qbm/pgsql"]
+	path = qbm/pgsql
+	url = https://github.com/isndev/qbm-pgsql
+	branch = main
+[submodule "qbm/redis"]
+	path = qbm/redis
+	url = https://github.com/isndev/qbm-redis
+	branch = main
+[submodule "qbm/ws"]
+	path = qbm/ws
+	url = https://github.com/isndev/qbm-websocket
+	branch = main
+[submodule "examples"]
+	path = examples
+	url = https://github.com/isndev/qb-examples
+	branch = main

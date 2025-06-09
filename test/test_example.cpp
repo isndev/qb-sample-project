@@ -20,7 +20,7 @@
 #include <qb/actor.h>
 
 TEST(Example, StartEngine) {
-  qb::Main main({0});
+  qb::Main main;
 
   main.start();
   main.join();

@@ -1,32 +1,38 @@
 
+#include <http/http.h>
+#include <qb/actor.h>
 #include <qb/main.h>
-#include <qb-module/timer/service/Scheduler.h>
 
-struct SampleTimedEvent : public qbm::timer::event::Timed {
-    SampleTimedEvent(qb::Timespan const &span, uint32_t const repeat = 1)
-        : Timed(span, repeat)
-    {}
-};
+// simple http actor
+class HttpActor : public qb::Actor
+                , public qb::http::Server<> {
+    public:
+    bool onInit() override {
+        router().get("/", [](auto ctx) {
+            ctx->response().set_content_type("application/json");
+            ctx->response().body() = qb::json{
+                {"status", "ok"},
+                {"date", qb::http::date::now()}
+            };
+            ctx->complete();
+        });
 
-class ActorSample : public qb::Actor {
-public:
-    bool onInit() override final {
-        registerEvent<SampleTimedEvent>(*this);
-        push<SampleTimedEvent>(getServiceId<qbm::timer::service::Tag>(0), qb::Timespan::seconds(3));
+        router().compile();
+        if (!listen({"tcp://0.0.0.0:8080"}))
+            return false;
+
+        start();
         return true;
-    }
-
-    void on(SampleTimedEvent const &event) {
-        broadcast<qb::KillEvent>();
     }
 };
 
 int main() {
-    qb::Main main({0});
-    main.core(0)
-            .addActor<qbm::timer::service::Scheduler>()
-            .addActor<ActorSample>();
+    qb::Main main;
 
+    main.core(0)
+        .addActor<HttpActor>();
+
+    std::cout << "Server started listening on http://localhost:8080, Ctrl-C to quit" << std::endl;
     main.start();
     main.join();
     return 0;

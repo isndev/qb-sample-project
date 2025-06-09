@@ -1,13 +1,10 @@
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-*build*
-build/docs/html
-.vs
-.idea
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/out
+/CMakeSettings.json
+/build
+/.vs
+/.idea
+/backup
