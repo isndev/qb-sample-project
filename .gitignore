@@ -1,10 +1,6 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
-
-/out
-/CMakeSettings.json
-/build
-/.vs
-/.idea
-/backup
+# This repository is a template payload, not a buildable tree: template/ only compiles after the
+# scaffolder has rendered it. Nothing should be built here.
+build/
+.DS_Store
+.idea/
+.vscode/

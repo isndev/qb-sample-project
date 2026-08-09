@@ -1,0 +1,18 @@
+# Build trees. FetchContent puts qb and the qbm modules under build/_deps, so removing this
+# directory also removes the fetched sources -- the next configure re-fetches them.
+build/
+build-*/
+cmake-build-*/
+
+# CMake leftovers when someone configures in-source by accident
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+install_manifest.txt
+
+# Editors / OS
+.vscode/
+.idea/
+.cache/
+compile_commands.json
+.DS_Store

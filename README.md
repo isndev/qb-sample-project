@@ -1,104 +1,90 @@
 # qb-sample-project
 
-Minimal boilerplate to kickstart a C++17 project using the **qb** framework (actor model-based).
-
----
-
-## ⚙️ Requirements
-
-- C++17 compiler (GCC ≥ 7, Clang ≥ 4, MSVC ≥ 19.11, or Xcode ≥ 10.2)
-- CMake ≥ 3.13
-- `qb/` directory with the qb framework cloned
-- `qbm/` directory with qb modules (e.g., `qbm-http`)
-- Optional: enable tests with `-DQB_BUILD_TEST=ON`
-
----
-
-## 🧱 Project Structure
-
-```
-/
-├── qb/              ← qb framework
-├── qbm/             ← qb modules (e.g., qbm-http)
-├── examples/        ← usage examples
-├── src/main.cpp     ← main application entry point
-├── test/            ← unit tests (optional)
-└── CMakeLists.txt   ← build configuration
-```
-
----
-
-## 🚀 Build Instructions
-
-From the project root:
+The project template behind `qb-new-project.sh`. It is **not** a project you clone and use — it
+is the payload a scaffolder renders. Start a project like this:
 
 ```bash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DQB_BUILD_TEST=ON ..
-make
+curl -fsSL https://raw.githubusercontent.com/isndev/qb/main/script/qb-new-project.sh | bash /dev/stdin MyProject
+cd MyProject
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+./build/bin/MyProject
 ```
 
-- The resulting binary will be: `build/qb-sample-project`
-- To skip tests: omit the `-DQB_BUILD_TEST` flag
+That produces a fresh git repository with one commit, named after you throughout, depending on a
+qb the scaffolder chose — no submodules, no history that is not yours.
 
----
+## Layout
 
-## 🧪 Running Tests
+```
+template/     the payload. Everything here becomes the user's project.
+README.md     this file — about the template, never copied
+LICENSE
+.github/workflows/template.yml
+```
 
-If compiled with tests enabled:
+`template/` is a directory rather than "the repository minus an exclusion list" on purpose: an
+exclusion list is a thing you forget to update, and the failure is silent — the user's project
+quietly inherits the template's own CI or README.
+
+## Placeholders
+
+The scaffolder owns the substitution vocabulary; this template may only use these tokens, in file
+contents **and** in path names. An unknown `@QB_...@` token is a hard error at scaffold time, so
+adding one here without teaching the scaffolder about it fails loudly rather than shipping a
+half-rendered tree.
+
+| Token               | Becomes                                        | Example (`MyProject`) |
+|---------------------|------------------------------------------------|-----------------------|
+| `@QB_NAME@`         | the name the user passed, verbatim              | `MyProject`           |
+| `@QB_NAME_LOWER@`   | lowercased — C++ namespaces                     | `myproject`           |
+| `@QB_NAME_UPPER@`   | uppercased — include guards, CMake options      | `MYPROJECT`           |
+| `@QB_REF@`          | the isndev/qb git ref the project builds against| `develop`             |
+| `@QB_VERSION@`      | the qb version the scaffolder shipped with      | `3.0.0`               |
+| `@QB_TEMPLATE_REF@` | the ref of this template that was used          | `develop`             |
+
+## How this template stays current
+
+It did not, for seven years, and the reason was structural rather than neglect: nothing bound a
+template version to a qb version, and nothing ever built the template. Both are fixed, and both
+fixes matter.
+
+**Version binding.** The old template stored qb as a submodule gitlink — a pinned dependency
+living in the template, which can only drift away from the qb whose script cloned it. It drifted
+to a commit from before v2.0.0 while continuing to build against that pin. Nothing is stored now:
+`qb-new-project.sh` resolves the ref from `QB_FRAMEWORK_VERSION` in the qb it ships with, and
+writes it into the generated `CMakeLists.txt`. The one-liner's URL therefore selects the pairing —
+`.../qb/main/script/...` is the released line, `.../qb/v3.0.0/script/...` is that release. The
+scaffolder reports which ref it used and why, including when it had to fall back.
+
+Branches here follow qb's: **`develop`** is the next version, **`main`**/**`master`** the released
+line. The scaffolder prefers a `v<version>` tag, falls back to the development line while that
+version is unreleased, and says so either way.
+
+**A lane that can fail.** `.github/workflows/template.yml` runs qb's actual `qb-new-project.sh`
+against this checkout, then configures, builds, tests and *curls* the result on Linux and macOS,
+weekly and on every push. It asserts a non-zero translation-unit count, that no placeholder
+survived, that the generated repository has exactly one commit and no remote, that the suite
+executed rather than skipped, and that the server returns the expected JSON body. Drift is now a
+red build instead of a discovery.
+
+## Changing the template
+
+Render it locally with the real scaffolder — no push required:
 
 ```bash
-cd build
-ctest --output-on-failure
+git clone https://github.com/isndev/qb
+cd /tmp && QB_TEMPLATE_DIR=/path/to/qb-sample-project \
+  bash /path/to/qb/script/qb-new-project.sh Scratch
+cd Scratch && cmake -S . -B build -DSCRATCH_BUILD_TESTS=ON && cmake --build build --parallel
 ```
 
----
+`QB_TEMPLATE_DIR` is what the CI lane uses too, which is the point: the thing you run locally is
+the thing that gates the pull request.
 
-## 🔗 Dependencies
+Keep `template/` buildable *after rendering*, not before — it is not expected to configure with
+the placeholders in place.
 
-This project links with:
-- **qb-core** (core runtime)
-- **qbm-http** (HTTP module)
+## License
 
-Handled via CMake:
-
-```cmake
-target_link_libraries(qb-sample-project qb-core qbm-http)
-```
-
----
-
-## 📚 Documentation & Resources
-
-- **qb**: C++ Actor Model framework for scalable concurrency
-- See `examples/` for reference use cases
-- For advanced CMake setups: [awesome-cmake](https://github.com/onqtam/awesome-cmake)
-
----
-
-## 🛠️ Customization
-
-- Add your sources to `src/`, custom modules to `qbm/`
-- Update `target_link_libraries()` in CMake as needed
-- Enable extra build options (e.g. `-DQB_BUILD_BENCHMARK=ON`) if supported
-
----
-
-## 📝 License
-
-Apache‑2.0 (see `qb/LICENSE`)
-
----
-
-## ✅ Contribution
-
-1. Fork this repo
-2. Create a feature branch: `feature/your-change`
-3. Add code, tests, docs
-4. Open a Pull Request
-
----
-
-## 🔚 Summary
-
-This README provides a quick reference for building and extending a project using **qb**. If you need help integrating new modules, CI/CD, or packaging—ask directly.
+Apache-2.0, matching qb. See `LICENSE`.

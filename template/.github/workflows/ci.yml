@@ -1,0 +1,143 @@
+# @QB_NAME@ — build, test, run.
+#
+# This workflow ships with the project on purpose. The template it came from went two major
+# versions stale without anyone noticing, and the single reason was that nothing built it: green
+# meant nothing because there was no lane. A generated project starts with one so that the same
+# thing cannot happen to yours.
+#
+# Read the anti-vacuity steps before trimming this file. Every one of them exists because the
+# corresponding failure has actually shipped somewhere in this ecosystem:
+#   * a build that compiled 0 translation units and reported success (a stale build directory
+#     survives `cmake --fresh`, which only wipes the top-level cache);
+#   * a test lane that ran 0 tests and exited 0, because `ctest` says "No tests were found!!!"
+#     with a zero exit code;
+#   * a suite that "100% passed" while every test in it self-skipped -- ctest counts a skip as a
+#     pass, so a headline percentage is not evidence that anything executed.
+name: ci
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libssl-dev zlib1g-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja openssl@3
+
+      # qb and the qbm modules are fetched here, at the ref written into CMakeLists.txt when this
+      # project was scaffolded. Nothing is a submodule, so there is no `submodules: recursive`
+      # above and no pinned gitlink that can go stale in this repository.
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -D@QB_NAME_UPPER@_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel 2>&1 | tee "${RUNNER_TEMP}/build.log"
+
+      # A build that compiled nothing cannot fail, and would make every check below vacuous.
+      - name: Translation units compiled must be non-zero
+        run: |
+          set -euo pipefail
+          tus="$(grep -c 'Building CXX object' "${RUNNER_TEMP}/build.log" || true)"
+          echo "translation units compiled: ${tus}"
+          [ "${tus}" -gt 0 ] || { echo "::error::0 TUs compiled; every check below would be vacuous"; exit 1; }
+
+      # The artifact must exist AND run. `--version` is the cheapest end-to-end proof that the
+      # binary links, loads and executes; the HTTP check below is the expensive one.
+      - name: The binary exists and runs
+        run: |
+          set -euo pipefail
+          test -x build/bin/@QB_NAME@ || { echo "::error::build/bin/@QB_NAME@ was not produced"; exit 1; }
+          out="$(./build/bin/@QB_NAME@ --version)"
+          echo "${out}"
+          case "${out}" in
+            "@QB_NAME@ "*) ;;
+            *) echo "::error::--version printed '${out}'"; exit 1 ;;
+          esac
+
+      # THE anti-vacuity gate for the suite. `ctest` exits 0 when it finds no test at all and
+      # when every test skips, so the count is read out of the JUnit report rather than trusted
+      # from the exit code. The floor is a floor: adding tests must never read as a failure.
+      - name: Test
+        run: |
+          set -euo pipefail
+          ctest --test-dir build -L 'module:@QB_NAME@' --output-on-failure \
+                --output-junit "${RUNNER_TEMP}/results.xml"
+          python3 - "${RUNNER_TEMP}/results.xml" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          cases = list(ET.parse(sys.argv[1]).getroot().iter('testcase'))
+          skipped = [c.get('name') for c in cases if c.find('skipped') is not None]
+          failed  = [c.get('name') for c in cases if c.find('failure') is not None]
+          executed = len(cases) - len(skipped)
+          print(f"registered={len(cases)} executed={executed} skipped={len(skipped)} failed={len(failed)}")
+          for n in skipped: print(f"  SKIPPED: {n}")
+          bad = False
+          if len(cases) < 2:
+              print(f"::error::only {len(cases)} tests registered, floor is 2"); bad = True
+          if executed < 2:
+              print(f"::error::only {executed} tests EXECUTED, floor is 2"); bad = True
+          if skipped:
+              print("::error::a test self-skipped; ctest reports that as a pass"); bad = True
+          if failed:
+              print(f"::error::{len(failed)} test(s) failed"); bad = True
+          sys.exit(1 if bad else 0)
+          PY
+
+      # The server actually serving is the property a user cares about, and it is not implied by
+      # anything above: the suite never opens a socket. Start it, curl it, assert the BODY.
+      # Asserting the body rather than the status code is deliberate -- a 200 with the wrong
+      # payload is the failure a status-code check cannot see.
+      - name: The server answers over HTTP
+        run: |
+          set -euo pipefail
+          ./build/bin/@QB_NAME@ --port 18080 &
+          server=$!
+          trap 'kill "${server}" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 50); do
+            if curl -fsS --max-time 1 "http://127.0.0.1:18080/health" >/dev/null 2>&1; then break; fi
+            sleep 0.2
+          done
+
+          health="$(curl -fsS --max-time 5 "http://127.0.0.1:18080/health")"
+          greet="$(curl -fsS --max-time 5 "http://127.0.0.1:18080/?name=ada")"
+          echo "GET /health -> ${health}"
+          echo "GET /?name=ada -> ${greet}"
+
+          echo "${health}" | grep -q '"status":"ok"' || {
+            echo "::error::/health did not report ok"; exit 1; }
+          echo "${greet}" | grep -q '"message":"hello, ada"' || {
+            echo "::error::/ did not greet the caller"; exit 1; }
+
+          kill "${server}"
+          wait "${server}" 2>/dev/null || true
+          echo "ok: the server built here served both routes"
