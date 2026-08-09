@@ -168,10 +168,27 @@ jobs:
           # And the tree must actually say the user's name, not the template's.
           grep -q 'project(DemoApp' CMakeLists.txt || {
             echo "::error::CMakeLists.txt does not name the project DemoApp"; fail=1; }
-          if grep -rIl 'qb-sample-project' . --exclude-dir=.git --exclude=README.md | grep -q .; then
-            echo "::error::the template's own name leaked into the generated tree:"
-            grep -rIl 'qb-sample-project' . --exclude-dir=.git --exclude=README.md | sed 's/^/  /'
+
+          # THE TEMPLATE'S NAME IN A BUILD-SIGNIFICANT POSITION, which is not the same as the
+          # template's name anywhere. A provenance line -- "generated from isndev/qb-sample-project
+          # (develop)" -- is legitimate and wanted: it is exactly the breadcrumb whose absence let
+          # the old template's staleness go unnoticed for years. What must never appear is the
+          # template's name where the BUILD reads it. So comment lines and Markdown are ignored,
+          # and the identifier forms are pinned explicitly rather than left to the broad scan.
+          #
+          # Written this way after the broad version fired on that provenance comment: a check
+          # that forces you to delete useful output to make it pass is measuring the wrong thing.
+          leaked="$(grep -rIn 'qb-sample-project' . \
+                      --exclude-dir=.git --exclude='*.md' \
+                    | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)"
+          if [ -n "${leaked}" ]; then
+            echo "::error::the template's name appears outside a comment:"
+            printf '%s\n' "${leaked}" | sed 's/^/  /'
             fail=1
+          fi
+          if grep -rInE '(project|add_executable|add_library|add_custom_target)\(qb-sample-project' \
+                 . --exclude-dir=.git | grep -q .; then
+            echo "::error::a CMake target is named after the template"; fail=1
           fi
           exit "${fail}"
 
