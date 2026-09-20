@@ -40,7 +40,7 @@ half-rendered tree.
 | `@QB_NAME_LOWER@`   | lowercased — C++ namespaces                     | `myproject`           |
 | `@QB_NAME_UPPER@`   | uppercased — include guards, CMake options      | `MYPROJECT`           |
 | `@QB_REF@`          | the isndev/qb git ref the project builds against| `develop`             |
-| `@QB_VERSION@`      | the qb version the scaffolder shipped with      | `3.0.0`               |
+| `@QB_VERSION@`      | the qb version the scaffolder shipped with      | `3.1.0`               |
 | `@QB_TEMPLATE_REF@` | the ref of this template that was used          | `develop`             |
 
 ## How this template stays current
@@ -54,7 +54,7 @@ living in the template, which can only drift away from the qb whose script clone
 to a commit from before v2.0.0 while continuing to build against that pin. Nothing is stored now:
 `qb-new-project.sh` resolves the ref from `QB_FRAMEWORK_VERSION` in the qb it ships with, and
 writes it into the generated `CMakeLists.txt`. The one-liner's URL therefore selects the pairing —
-`.../qb/main/script/...` is the released line, `.../qb/v3.0.0/script/...` is that release. The
+`.../qb/main/script/...` is the released line, `.../qb/v3.1.0/script/...` is that release. The
 scaffolder reports which ref it used and why, including when it had to fall back.
 
 Branches here follow qb's: **`develop`** is the next version, **`main`**/**`master`** the released
