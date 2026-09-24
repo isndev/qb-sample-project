@@ -111,7 +111,7 @@ your build follows a moving line — fine while you are developing, not fine for
 to a released tag once you want reproducible builds:
 
 ```cmake
-set(QB_GIT_REF "v3.2.0" CACHE STRING "...")
+set(QB_GIT_REF "v3.2.1" CACHE STRING "...")
 ```
 
 ## Documentation
