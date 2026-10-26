@@ -68,10 +68,9 @@ public:
 
     void
     on(const Pong &event) {
-        // ActorId has no operator==; it converts to uint32_t, so compare that explicitly
-        // rather than leaning on the implicit conversion.
-        if (static_cast<std::uint32_t>(event.getSource()) ==
-            static_cast<std::uint32_t>(_responder)) {
+        // A qb::ActorId is a 64-bit identity (slot, core and incarnation generation) since qb 3.3
+        // and compares every bit; it no longer converts to an integer, so compare the identities.
+        if (event.getSource() == _responder) {
             g_reply_came_from_responder.store(true);
         }
         if (g_pongs_received.fetch_add(1) + 1 == kRounds) {
